@@ -38,6 +38,10 @@
 - Node.js 18+
 - Rust 1.70+
 - Tauri CLI（`cargo install tauri-cli --version "^2"`）
+- ```
+  #中国源
+  export RUSTUP_DIST_SERVER=https://mirrors.ustc.edu.cn/rust-static && export RUSTUP_UPDATE_ROOT=https://mirrors.ustc.edu.cn/rust-static/rustup && curl --proto '=https' --tlsv1.2 -sSf   https://sh.rustup.rs | sh
+  ```
 
 ### 安装依赖
 
