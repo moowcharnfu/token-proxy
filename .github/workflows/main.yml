@@ -14,7 +14,7 @@ jobs:
           - platform: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             bundle: linux
-          - platform: macos-latest
+          - platform: macos-15-intel
             target: x86_64-apple-darwin
             bundle: macos-x86_64
             deployment_target: '10.15'
@@ -67,11 +67,44 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
         run: npm run tauri build
 
-      - name: Upload bundle
+      - name: List Build bundle
+        run: |
+          echo "构建的文件："
+          ls -R src-tauri/target/release/bundle/
+
+      - name: Upload bundle(exe)
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-${{ matrix.bundle }}.zip
-          path: src-tauri/target/release/bundle/**
+          name: bundle-${{ matrix.bundle }}.exe
+          path: src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: warn
+
+      - name: Upload bundle(dmg-${{ matrix.bundle }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.dmg
+          path: src-tauri/target/release/bundle/**/*.dmg
+          if-no-files-found: warn
+
+      - name: Upload bundle(AppImage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.AppImage
+          path: src-tauri/target/release/bundle/**/*.AppImage
+          if-no-files-found: warn
+
+      - name: Upload bundle(deb)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.deb
+          path: src-tauri/target/release/bundle/**/*.deb
+          if-no-files-found: warn
+
+      - name: Upload bundle(rpm)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.rpm
+          path: src-tauri/target/release/bundle/**/*.rpm
           if-no-files-found: warn
 
   release:
@@ -130,6 +163,7 @@ jobs:
         with:
           files: |
             ./release-assets/*
+            ./release-assets/**/*
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
