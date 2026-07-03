@@ -1,0 +1,179 @@
+name: Release CI
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            bundle: linux
+          - platform: macos-15-intel
+            target: x86_64-apple-darwin
+            bundle: macos-x86_64
+            deployment_target: '10.15'
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            bundle: macos-aarch64
+            deployment_target: '11.0'
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: windows-x86_64
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Set macOS deployment target
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=${{ matrix.deployment_target }}" >> $GITHUB_ENV
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build Tauri app
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
+        run: npm run tauri build
+
+      - name: List Build bundle
+        run: |
+          echo "构建的文件："
+          ls -R src-tauri/target/release/bundle/
+
+      - name: Upload bundle(exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.exe
+          path: src-tauri/target/release/bundle/**/*.exe
+          if-no-files-found: warn
+
+      - name: Upload bundle(dmg-${{ matrix.bundle }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.dmg
+          path: src-tauri/target/release/bundle/**/*.dmg
+          if-no-files-found: warn
+
+      - name: Upload bundle(AppImage)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.AppImage
+          path: src-tauri/target/release/bundle/**/*.AppImage
+          if-no-files-found: warn
+
+      - name: Upload bundle(deb)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.deb
+          path: src-tauri/target/release/bundle/**/*.deb
+          if-no-files-found: warn
+
+      - name: Upload bundle(rpm)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.bundle }}.rpm
+          path: src-tauri/target/release/bundle/**/*.rpm
+          if-no-files-found: warn
+
+  release:
+    name: Create GitHub Release
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    # 可选：如果坚持使用 GITHUB_TOKEN，需在此处声明 permissions: contents: write
+    # 但使用 PAT 时，权限由 PAT 本身的 scope 决定，此处可不写或保留默认
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bundle-*
+          merge-multiple: true
+          path: ./release-assets
+
+      - name: List Downloaded Assets
+        run: |
+          echo "下载的资产文件："
+          find ./release-assets -type f -exec ls -lh {} \;
+
+      - name: Generate Checksums
+        run: |
+          cd ./release-assets
+          
+          # 列出所有文件
+          echo "当前目录文件列表："
+          ls -la
+          
+          # 创建校验和文件
+          > checksums.txt
+          
+          # 处理所有非校验和文件
+          file_count=0
+          for file in *; do
+            if [ -f "$file" ] && [ "$file" != "checksums.txt" ]; then
+              echo "为文件 '$file' 生成校验和..."
+              sha256sum "$file" >> checksums.txt
+              file_count=$((file_count + 1))
+            fi
+          done
+          
+          if [ $file_count -eq 0 ]; then
+            echo "警告：没有找到任何资产文件，创建占位符"
+            echo "no_assets_available" > placeholder.txt
+            sha256sum placeholder.txt >> checksums.txt
+            rm placeholder.txt
+          fi
+          
+          echo "生成的校验和："
+          cat checksums.txt
+          echo "文件大小：" $(wc -c < checksums.txt) "字节"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ./release-assets/*
+            ./release-assets/**/*
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            Automated release for ${{ github.ref_name }}.
+            
+            &zwnj;**校验和：**&zwnj;
+            ```
+            $(cat ./release-assets/checksums.txt)
+            ```
+          draft: false
+          prerelease: false
+          # 关键修改：使用 PAT 令牌
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
