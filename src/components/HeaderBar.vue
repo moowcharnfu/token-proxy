@@ -130,6 +130,7 @@ const healthStatus = computed(() => {
 
 .header-right {
   -webkit-app-region: no-drag;
+  min-width: 0;
 }
 
 .active-provider-card {

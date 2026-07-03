@@ -34,9 +34,9 @@ const statusConfig = computed(() => {
 </script>
 
 <template>
-  <div class="provider-item" :class="{ 'provider-active': isActive }">
-    <div class="provider-main">
-      <div class="provider-icon">
+  <div class="provider-item p-3 sm:p-4 lg:p-5" :class="{ 'provider-active': isActive }">
+    <div class="provider-main gap-3 sm:gap-4">
+      <div class="provider-icon w-11 h-11 flex-shrink-0">
         {{ provider.name.charAt(0).toUpperCase() }}
       </div>
       <div class="provider-info">
@@ -68,7 +68,7 @@ const statusConfig = computed(() => {
       </div>
     </div>
 
-    <div class="provider-actions">
+    <div class="provider-actions gap-1 sm:gap-3">
       <button class="btn btn-ghost btn-icon test-btn" :class="{ 'btn-testing': isTesting }" @click="emit('test', provider.id)" :title="isTesting ? '测试中...' : '测试连通性'" :disabled="isTesting">
         <svg v-if="!isTesting" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
@@ -100,7 +100,6 @@ const statusConfig = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -134,13 +133,10 @@ const statusConfig = computed(() => {
 .provider-main {
   display: flex;
   align-items: center;
-  gap: 16px;
   flex: 1;
 }
 
 .provider-icon {
-  width: 44px;
-  height: 44px;
   border-radius: 12px;
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
   display: flex;
@@ -149,7 +145,6 @@ const statusConfig = computed(() => {
   color: white;
   font-weight: 600;
   font-size: 18px;
-  flex-shrink: 0;
 }
 
 .provider-info {
@@ -243,7 +238,6 @@ const statusConfig = computed(() => {
 .provider-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
 }
 

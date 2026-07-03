@@ -15,7 +15,7 @@ onMounted(async () => {
 <template>
   <div class="app-container">
     <HeaderBar />
-    <main class="main-content">
+    <main class="main-content p-4 md:p-6 lg:p-8">
       <ProviderList />
     </main>
     <EnvPanel />
@@ -33,6 +33,5 @@ onMounted(async () => {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
 }
 </style>

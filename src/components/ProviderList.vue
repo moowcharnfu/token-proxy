@@ -64,8 +64,8 @@ const handleTest = async (id: string) => {
 </script>
 
 <template>
-  <div class="provider-list">
-    <div class="list-header">
+  <div class="provider-list w-full max-w-5xl mx-auto">
+    <div class="list-header mb-4 md:mb-6 lg:mb-8">
       <div>
         <h2 class="section-title">提供商列表</h2>
         <p class="section-subtitle">管理你的 AI API Token 提供商</p>
@@ -79,7 +79,7 @@ const handleTest = async (id: string) => {
       </button>
     </div>
 
-    <div class="list-items">
+    <div class="list-items grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
       <!-- Loading Skeleton -->
       <template v-if="loading">
         <div v-for="i in 3" :key="i" class="skeleton-item">
@@ -164,7 +164,6 @@ const handleTest = async (id: string) => {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin-bottom: 24px;
   padding-bottom: 20px;
   border-bottom: 1px solid var(--border);
 }
@@ -180,12 +179,6 @@ const handleTest = async (id: string) => {
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 4px;
-}
-
-.list-items {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .list-items .provider-item {

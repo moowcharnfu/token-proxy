@@ -11,7 +11,7 @@ dist/
 # ================================
 target/
 **/*.rs.bk
-.cargo/config.toml
+.cargo/
 
 # ================================
 # Tauri generated

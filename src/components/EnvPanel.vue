@@ -113,7 +113,7 @@ const handleRevert = async () => {
 
 <template>
   <div class="env-panel">
-    <div class="panel-content">
+    <div class="panel-content p-4 md:p-6 lg:p-8">
       <!-- Header -->
       <div class="panel-header">
         <div class="panel-title">
@@ -250,7 +250,6 @@ const handleRevert = async () => {
 .panel-content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 24px;
 }
 
 .panel-header {

@@ -11,6 +11,7 @@
 - ✅ 一键应用到 Claude Code（自动写 `~/.claude/settings.json` + `config.json`）
 - ✅ 跨平台：macOS / Linux / Windows
 - ✅ 激活项自动滚动定位
+- ✅ 响应式自适应布局（窗口大小变化时自动调整间距和列数）
 
 ## 预置提供商
 
