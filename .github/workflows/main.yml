@@ -11,20 +11,33 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux
           - platform: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            bundle: linux
-          - platform: macos-15-intel
-            target: x86_64-apple-darwin
-            bundle: macos-x86_64
-            deployment_target: '10.15'
-          - platform: macos-latest
-            target: aarch64-apple-darwin
-            bundle: macos-aarch64
-            deployment_target: '11.0'
+            bundle_name: linux-x64
+            
+          # Windows
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
-            bundle: windows-x86_64
+            bundle_name: windows-x64
+
+          # macOS Intel (原生构建 x86_64)
+          # - platform: macos-15-intel # macos-15-intel 是 Intel 芯片
+          #   target: x86_64-apple-darwin
+          #   bundle_name: macos-x64
+          #   deployment_target: '10.15'
+
+          # macOS Apple Silicon (原生构建 arm64)
+          # - platform: macos-14 # macos-14 是 M1/M2 芯片
+          #   target: aarch64-apple-darwin
+          #   bundle_name: macos-arm64
+          #   deployment_target: '11.0'
+
+          # macOS Apple Silicon (原生构建)
+          - platform: macos-latest 
+            target: universal-apple-darwin
+            bundle_name: universal-macos
+            deployment_target: '11.0'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,9 +49,16 @@ jobs:
           node-version: '24'
 
       - name: Setup Rust
+        if: ${{ !startsWith(matrix.bundle_name, 'universal-') }}
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Setup Rust
+        if: startsWith(matrix.bundle_name, 'universal-')
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Add macOS targets
         if: startsWith(matrix.platform, 'macos')
@@ -72,65 +92,45 @@ jobs:
         working-directory: ./
         run: npm run build
 
-      - name: Build Tauri app
-        if: ${{ !startsWith(matrix.platform, 'macos') }}
+      # --- 关键修改：构建步骤 ---
+      - name: Build Tauri App
         working-directory: ./
-        env:
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
-        run: npm run tauri build
+        if: ${{ !startsWith(matrix.bundle_name, 'universal-') }}
+        run: |          
+          # 执行构建，指定 Target
+          # 注意：这里不需要双重 --，npm run script -- args 会自动传递
+          npm run tauri build -- --target ${{ matrix.target }}
 
-      - name: Build Tauri app(macos)
-        if: startsWith(matrix.platform, 'macos')
+      # --- 关键修改：构建步骤 ---
+      - name: Build Tauri App
+        if: startsWith(matrix.bundle_name, 'universal-')
         working-directory: ./
-        env:
-          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.deployment_target }}
-        run: npm run tauri:build -- --target universal-apple-darwin # -- --target多一个--避免认为是npm参数
-        
-      - name: List Build bundle
+        run: |          
+          # 执行构建，指定 Target
+          # 注意：这里不需要双重 --，npm run script -- args 会自动传递
+          npm run tauri build -- --target universal-apple-darwin
+
+      # --- 调试步骤：确认文件生成 ---
+      - name: Check Build Output
         working-directory: ./
         run: |
-          echo "构建的文件："
-          ls -R src-tauri/target/
+          echo "--- Checking Bundle Directory ---"
+          # Tauri v2 的路径通常是 target/<target>/release/bundle
+          ls -R src-tauri/target/${{ matrix.target }}/release/bundle || echo "Bundle not found in standard path"
+          ls -R src-tauri/target/release/bundle || echo "Bundle not found in fallback path"
 
-      - name: Upload bundle(exe)
-        if: startsWith(matrix.bundle, 'windows')
+      # --- 上传制品 ---
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bundle-${{ matrix.bundle }}.exe
-          path: ./src-tauri/target/release/bundle/**/*.exe
-          if-no-files-found: warn
-
-      - name: Upload bundle(dmg-${{ matrix.bundle }})
-        if: startsWith(matrix.bundle, 'macos')
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-${{ matrix.bundle }}.dmg
-          path: ./src-tauri/target/**/release/bundle/**/*.dmg
-          if-no-files-found: warn
-
-      - name: Upload bundle(AppImage)
-        if: startsWith(matrix.bundle, 'linux')
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-${{ matrix.bundle }}.AppImage
-          path: ./src-tauri/target/release/bundle/**/*.AppImage
-          if-no-files-found: warn
-
-      - name: Upload bundle(deb)
-        if: startsWith(matrix.bundle, 'linux')
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-${{ matrix.bundle }}.deb
-          path: ./src-tauri/target/release/bundle/**/*.deb
-          if-no-files-found: warn
-
-      - name: Upload bundle(rpm)
-        if: startsWith(matrix.bundle, 'linux')
-        uses: actions/upload-artifact@v4
-        with:
-          name: bundle-${{ matrix.bundle }}.rpm
-          path: ./src-tauri/target/release/bundle/**/*.rpm
-          if-no-files-found: warn
+          name: bundle-${{ matrix.bundle_name }}
+          # 使用通配符匹配 dmg, exe, deb 等
+          path: |
+            src-tauri/target/**/release/bundle/**/*.dmg
+            src-tauri/target/**/release/bundle/**/*.exe
+            src-tauri/target/**/release/bundle/**/*.AppImage
+            src-tauri/target/**/release/bundle/**/*.deb
+          if-no-files-found: error # 如果没找到文件直接报错，不要静默失败
 
   release:
     name: Create GitHub Release
